@@ -1,0 +1,24 @@
+{
+  "external_rtmp_url": "rtmp://youtube.com/live2/STREAMKEY",
+  "streams": {
+    "stream1": {
+      "port": 1935,
+      "app": "live",
+      "key": "secret1"
+    },
+    "stream2": {
+      "port": 1936,
+      "app": "live",
+      "key": "secret2"
+    }
+  },
+  "auth_user": "admin",
+  "auth_password": "admin",
+  "ffmpeg_path": "/usr/bin/ffmpeg",
+  "nginx_path": "/usr/sbin/nginx",
+  "nginx_conf_path": "/nginx_modified.conf",
+  "final_app_name": "final",
+  "auth_check_path": "/auth_check.py",
+  "webserver_host": "0.0.0.0",
+  "webserver_port": 8000
+}
