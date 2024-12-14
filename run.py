@@ -1,3 +1,4 @@
+# run.py
 import subprocess
 import signal
 import sys
@@ -5,8 +6,14 @@ import time
 import json
 import os
 from synchronization import StreamSynchronizer
-from flask import Flask
+from preview_manager import PreviewManager
+from status_manager import StatusManager
 from webui.app import app as flask_app
+from threading import Thread
+
+def load_config():
+    with open("config.json", "r") as f:
+        return json.load(f)
 
 def generate_nginx_conf(config):
     base_dir = str(os.path.join(os.path.dirname(os.path.abspath(__file__))))
@@ -26,36 +33,40 @@ def generate_nginx_conf(config):
     with open(nginx_conf, 'w') as f:
         f.write(conf)
 
-def load_config():
-    with open("config.json", "r") as f:
-        return json.load(f)
+config = load_config()
+generate_nginx_conf(config)
 
-def main():
-    config = load_config()
-    generate_nginx_conf(config)
-    nginx_conf = str(os.path.join(os.path.dirname(os.path.abspath(__file__)), config['nginx_conf_path']))
+# Nginx starten
+nginx_conf = str(os.path.join(os.path.dirname(os.path.abspath(__file__)), config['nginx_conf_path']))
+nginx_proc = subprocess.Popen([config['nginx_path'], '-c', nginx_conf])
+time.sleep(2)
 
-    # Nginx starten
-    nginx_proc = subprocess.Popen([config['nginx_path'], '-c', nginx_conf])
+# Synchronisierung starten
+sync = StreamSynchronizer(config)
+sync.start()
 
-    # Kurze Pause um sicherzustellen, dass Nginx läuft
-    time.sleep(2)
+# Preview Manager starten (HLS-Previews)
+preview_manager = PreviewManager("config.json")
+preview_manager.start()
 
-    # Synchronizer starten
-    sync = StreamSynchronizer(config)
-    sync.start()
+# Status Manager starten
+status_manager = StatusManager("config.json")
+status_manager.start()
 
-    # Flask Webserver starten (in diesem Beispiel einfach auf Port 8080)
-    flask_app.run(host=config['webserver_host'], port=config['webserver_port'])
+# Flask in separatem Thread starten
+def run_flask():
+    flask_app.run(host='0.0.0.0', port=8080)
 
-    # Sauberes Beenden wenn CTRL+C
-    def signal_handler(sig, frame):
-        sync.stop()
-        nginx_proc.terminate()
-        sys.exit(0)
+flask_thread = Thread(target=run_flask)
+flask_thread.start()
 
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.pause()
+def signal_handler(sig, frame):
+    sync.stop()
+    preview_manager.stop()
+    status_manager.stop()
+    nginx_proc.terminate()
+    nginx_proc.wait()
+    sys.exit(0)
 
-if __name__ == "__main__":
-    main()
+signal.signal(signal.SIGINT, signal_handler)
+signal.pause()

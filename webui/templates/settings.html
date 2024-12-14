@@ -1,0 +1,19 @@
+<script>
+function updateStatus() {
+  fetch('/status')
+    .then(response => response.json())
+    .then(data => {
+      // data: {in1: 'green', in2: 'red', out: 'green', ...}
+      for (const key in data) {
+        const elements = document.querySelectorAll('.status-'+key);
+        elements.forEach(el => {
+          el.classList.remove('status-green','status-yellow','status-red');
+          el.classList.add('status-'+data[key]);
+        });
+      }
+    });
+}
+
+setInterval(updateStatus, 5000);
+updateStatus();
+</script>
