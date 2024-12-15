@@ -55,7 +55,7 @@ status_manager.start()
 
 # Flask in separatem Thread starten
 def run_flask():
-    flask_app.run(host='0.0.0.0', port=8080)
+    flask_app.run(host=config['webserver_host'], port=config['webserver_port'])
 
 flask_thread = Thread(target=run_flask)
 flask_thread.start()
